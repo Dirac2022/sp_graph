@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
+
+body {
+  @apply bg-neutral-950 text-neutral-100 font-sans antialiased;
+}
+
+button {
+  font: inherit;
+}

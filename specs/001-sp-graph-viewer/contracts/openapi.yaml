@@ -1,0 +1,206 @@
+openapi: 3.1.0
+info:
+  title: SP Graph Viewer API
+  version: 0.1.0
+  description: |
+    Read-only HTTP API that serves the stored-procedure dependency graph parsed from
+    data/mapeos_sp_grafo.json, plus a log-forwarding endpoint used by the frontend logger.
+    See contracts/api.md and ../data-model.md for prose context.
+servers:
+  - url: http://127.0.0.1:8000
+    description: Local dev server (FastAPI / Uvicorn)
+paths:
+  /api/graph:
+    get:
+      summary: Return the full SP dependency graph
+      description: |
+        Returns the parsed and validated graph data. The server re-reads the underlying JSON
+        file when its mtime changes, otherwise it serves a cached payload.
+      responses:
+        "200":
+          description: Graph payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphData"
+        "500":
+          description: Data file missing, unreadable, or unparseable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/log:
+    post:
+      summary: Forward a WARN/ERROR/CRITICAL log record from the frontend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogPayload"
+      responses:
+        "204":
+          description: Record accepted and persisted
+        "422":
+          description: Payload shape invalid (e.g., level not one of WARNING/ERROR/CRITICAL)
+        "500":
+          description: File sink unavailable
+  /api/health:
+    get:
+      summary: Liveness probe (does not touch the data file)
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+components:
+  schemas:
+    SpRole:
+      type: string
+      enum: [requerido, adjunto_hijo, adjunto_padre, adjunto_ambos]
+    LeafObjectType:
+      type: string
+      enum:
+        - Table
+        - View
+        - Scalar Function
+        - Table Function
+        - Inline Function
+        - OBJECT_OR_COLUMN
+        - TYPE
+    SpNode:
+      type: object
+      required: [id, rol, lines, isStub, outDegreeSp, inDegreeSp]
+      properties:
+        id:
+          type: string
+        rol:
+          $ref: "#/components/schemas/SpRole"
+        lines:
+          type: integer
+          nullable: true
+        isStub:
+          type: boolean
+        outDegreeSp:
+          type: integer
+          minimum: 0
+        inDegreeSp:
+          type: integer
+          minimum: 0
+        module:
+          type: string
+          nullable: true
+    SpEdge:
+      type: object
+      required: [id, source, target]
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+        target:
+          type: string
+    LeafRef:
+      type: object
+      required: [name, schema, objectType]
+      properties:
+        name:
+          type: string
+        schema:
+          type: string
+        objectType:
+          $ref: "#/components/schemas/LeafObjectType"
+    Warning:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          examples: [entries_mismatch, role_count_mismatch, stub_shape_mismatch, unknown_role]
+        message:
+          type: string
+    GraphMeta:
+      type: object
+      required: [dataFileMtimeIso, dataFilePath, totalEntries, totalRequerido]
+      properties:
+        dataFileMtimeIso:
+          type: string
+          format: date-time
+        dataFilePath:
+          type: string
+        totalEntries:
+          type: integer
+          minimum: 0
+        totalRequerido:
+          type: integer
+          minimum: 0
+    GraphData:
+      type: object
+      required: [meta, nodes, edges, ghosts, leavesBySp, warnings]
+      properties:
+        meta:
+          $ref: "#/components/schemas/GraphMeta"
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpEdge"
+        ghosts:
+          type: array
+          items:
+            type: string
+        leavesBySp:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/LeafRef"
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Warning"
+    LogPayload:
+      type: object
+      required: [level, module, message, timestamp]
+      properties:
+        level:
+          type: string
+          enum: [WARNING, ERROR, CRITICAL]
+        module:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        context:
+          type: object
+          additionalProperties: true
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - data_file_unreadable
+                - data_file_unparseable
+                - data_file_shape_invalid
+            message:
+              type: string
+            dataFilePath:
+              type: string

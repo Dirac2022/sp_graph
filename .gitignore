@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node / pnpm
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# Logs (keep the logs/ directory itself via .gitkeep)
+logs/*.log*
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
