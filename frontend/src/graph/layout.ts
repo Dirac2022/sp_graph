@@ -15,7 +15,7 @@ import type Graph from "graphology";
 import type { EdgeAttrs, NodeAttrs } from "./buildGraph";
 import { info as logInfo } from "../logger";
 
-const ITERATION_BUDGET_MS = 3_500;
+const ITERATION_BUDGET_MS = 10_000;
 
 /** Handle returned by {@link startLayout}. */
 export interface LayoutHandle {
@@ -49,8 +49,8 @@ export const startLayout = (
   const supervisor = new FA2Layout(graph, {
     settings: {
       ...inferred,
-      scalingRatio: 80,
-      gravity: 0.05,
+      scalingRatio: 500,
+      gravity: 0.005,
       outboundAttractionDistribution: true,
       edgeWeightInfluence: 0,
       slowDown: 1,

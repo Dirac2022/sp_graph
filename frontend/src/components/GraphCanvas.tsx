@@ -205,7 +205,7 @@ export const GraphCanvas = ({
             return {
               ...attrs,
               color: baseColor,
-              size: attrs.size * 2.6,
+              size: attrs.size * 1.2,
               forceLabel: true,
               zIndex: 4,
             };
@@ -214,7 +214,7 @@ export const GraphCanvas = ({
             return {
               ...attrs,
               color: CALLEE_COLOR,
-              size: attrs.size * 1.8,
+              size: attrs.size * 1.1,
               forceLabel: true,
               zIndex: 3,
             };
@@ -223,7 +223,7 @@ export const GraphCanvas = ({
             return {
               ...attrs,
               color: CALLER_COLOR,
-              size: attrs.size * 1.8,
+              size: attrs.size * 1.3,
               forceLabel: true,
               zIndex: 3,
             };
@@ -241,10 +241,10 @@ export const GraphCanvas = ({
           const source = graph.source(id);
           const target = graph.target(id);
           if (source === sel) {
-            return { ...attrs, color: CALLEE_COLOR, size: 1.8, zIndex: 3 };
+            return { ...attrs, color: CALLEE_COLOR, size: 1.1, zIndex: 3 };
           }
           if (target === sel) {
-            return { ...attrs, color: CALLER_COLOR, size: 1.8, zIndex: 3 };
+            return { ...attrs, color: CALLER_COLOR, size: 1.1, zIndex: 3 };
           }
           // Non-selection edge: leave it in its default styling.
           return attrs;
