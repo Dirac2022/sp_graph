@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+        {
+            "source": "/api/:path*",
+            "destination": "https://sp-graph.onrender.com/api/:path*"
+        }
+    ]
+}
