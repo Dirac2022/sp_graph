@@ -192,11 +192,16 @@ export const GraphCanvas = ({
         defaultEdgeColor: EDGE_COLOR,
         defaultDrawNodeHover: drawSelectionLabel,
         nodeReducer: (id, attrs) => {
+          const truncatedLabel = attrs.label && attrs.label.length > 10
+            ? attrs.label.substring(0, 10) + "..."
+            : attrs.label;
           const baseColor = colorForNode(attrs);
           const sel = selectedRef.current;
+
           if (sel === null) {
             return {
               ...attrs,
+              label: truncatedLabel,
               color: baseColor,
               zIndex: attrs.rol === "requerido" ? 1 : 0,
             };
@@ -204,6 +209,7 @@ export const GraphCanvas = ({
           if (id === sel) {
             return {
               ...attrs,
+              label: attrs.label, // Nombre completo
               color: baseColor,
               size: attrs.size * 1.2,
               forceLabel: true,
@@ -213,6 +219,7 @@ export const GraphCanvas = ({
           if (calleesRef.current.has(id)) {
             return {
               ...attrs,
+              label: attrs.label, // Nombre completo
               color: CALLEE_COLOR,
               size: attrs.size * 1.1,
               forceLabel: true,
@@ -222,15 +229,17 @@ export const GraphCanvas = ({
           if (callersRef.current.has(id)) {
             return {
               ...attrs,
+              label: attrs.label, // Nombre completo
               color: CALLER_COLOR,
               size: attrs.size * 1.3,
               forceLabel: true,
               zIndex: 3,
             };
           }
-          // Non-neighborhood node: keep normal styling.
+          // Non-neighborhood node: keep normal styling and truncated text.
           return {
             ...attrs,
+            label: truncatedLabel,
             color: baseColor,
             zIndex: attrs.rol === "requerido" ? 1 : 0,
           };
