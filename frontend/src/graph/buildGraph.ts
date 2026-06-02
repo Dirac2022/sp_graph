@@ -43,7 +43,7 @@ const DEFAULT_EDGE_SIZE = 0.6;
 
 const DEFAULT_NODE_SIZE = 3;
 const GHOST_NODE_SIZE = 1.5;
-const INITIAL_SPREAD = 100;
+const INITIAL_SPREAD = 1000;
 
 const seedCoord = (): number => (Math.random() * 2 - 1) * INITIAL_SPREAD;
 
