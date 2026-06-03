@@ -29,10 +29,22 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SP_GRAPH_", env_file=None)
 
     data_path: Path = Field(default=_REPO_ROOT / "data" / "mapeos_sp_grafo.json")
+    programs_path: Path = Field(
+        default=_REPO_ROOT / "data" / "ProgramasMagic_SP_ADMINISTRATIVO.csv"
+    )
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=8000)
     log_level: str = Field(default="INFO")
     log_file: Path = Field(default=_REPO_ROOT / "logs" / "app.log")
+
+    def resolved_programs_path(self) -> Path:
+        """Return ``programs_path`` resolved against the repository root if relative."""
+
+        return (
+            self.programs_path
+            if self.programs_path.is_absolute()
+            else _REPO_ROOT / self.programs_path
+        )
 
     def resolved_data_path(self) -> Path:
         """Return ``data_path`` resolved against the repository root if relative."""

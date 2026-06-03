@@ -23,6 +23,7 @@ import type Graph from "graphology";
 
 import type { EdgeAttrs, NodeAttrs } from "../graph/buildGraph";
 import { startLayout } from "../graph/layout";
+import type { MagicFilterMode } from "../hooks/useMagicFilter";
 import type { SpRole } from "../graph/types";
 import { info as logInfo } from "../logger";
 
@@ -34,6 +35,11 @@ interface GraphCanvasProps {
   /** Increments whenever the user presses the Reset View button. */
   readonly resetSignal: number;
   readonly onSelect: (id: string) => void;
+  /** When non-null, the Magic filter is active and this is the full set of magic SP ids. */
+  readonly magicSpIds: ReadonlySet<string> | null;
+  readonly magicMode: MagicFilterMode;
+  /** SPs belonging to the currently-selected program (highlighted in cyan). */
+  readonly selectedProgramSpIds: ReadonlySet<string> | null;
 }
 
 const ROLE_COLOR: Record<SpRole, string> = {
@@ -47,6 +53,7 @@ const STUB_COLOR = "#fbbf24";
 const GHOST_COLOR = "#3f3f46";
 const CALLEE_COLOR = "#fb923c";
 const CALLER_COLOR = "#a78bfa";
+const PROGRAM_COLOR = "#06b6d4";
 const LABEL_COLOR = "#f9fafb";
 const EDGE_COLOR = "#71717a";
 const LABEL_BG = "rgba(15, 23, 42, 0.95)";
@@ -142,6 +149,9 @@ export const GraphCanvas = ({
   callers,
   resetSignal,
   onSelect,
+  magicSpIds,
+  magicMode,
+  selectedProgramSpIds,
 }: GraphCanvasProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sigmaRef = useRef<Sigma<NodeAttrs, EdgeAttrs> | null>(null);
@@ -154,12 +164,18 @@ export const GraphCanvas = ({
   const calleesRef = useRef<ReadonlySet<string>>(callees);
   const callersRef = useRef<ReadonlySet<string>>(callers);
   const onSelectRef = useRef<(id: string) => void>(onSelect);
+  const magicSpIdsRef = useRef<ReadonlySet<string> | null>(magicSpIds);
+  const magicModeRef = useRef<MagicFilterMode>(magicMode);
+  const selectedProgramSpIdsRef = useRef<ReadonlySet<string> | null>(selectedProgramSpIds);
   useEffect(() => {
     selectedRef.current = selected;
     calleesRef.current = callees;
     callersRef.current = callers;
+    magicSpIdsRef.current = magicSpIds;
+    magicModeRef.current = magicMode;
+    selectedProgramSpIdsRef.current = selectedProgramSpIds;
     sigmaRef.current?.refresh();
-  }, [selected, callees, callers]);
+  }, [selected, callees, callers, magicSpIds, magicMode, selectedProgramSpIds]);
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
@@ -197,51 +213,75 @@ export const GraphCanvas = ({
             : attrs.label;
           const baseColor = colorForNode(attrs);
           const sel = selectedRef.current;
+          const magic = magicSpIdsRef.current;
+          const progIds = selectedProgramSpIdsRef.current;
 
-          if (sel === null) {
-            return {
-              ...attrs,
-              label: truncatedLabel,
-              color: baseColor,
-              zIndex: attrs.rol === "requerido" ? 1 : 0,
-            };
-          }
           if (id === sel) {
             return {
               ...attrs,
-              label: attrs.label, // Nombre completo
+              label: attrs.label,
               color: baseColor,
               size: attrs.size * 1.2,
               forceLabel: true,
               zIndex: 4,
+              hidden: false,
             };
           }
           if (calleesRef.current.has(id)) {
             return {
               ...attrs,
-              label: attrs.label, // Nombre completo
+              label: attrs.label,
               color: CALLEE_COLOR,
               size: attrs.size * 1.1,
               forceLabel: true,
               zIndex: 3,
+              hidden: false,
             };
           }
           if (callersRef.current.has(id)) {
             return {
               ...attrs,
-              label: attrs.label, // Nombre completo
+              label: attrs.label,
               color: CALLER_COLOR,
               size: attrs.size * 1.3,
               forceLabel: true,
               zIndex: 3,
+              hidden: false,
             };
           }
-          // Non-neighborhood node: keep normal styling and truncated text.
+          if (progIds !== null && progIds.has(id)) {
+            return {
+              ...attrs,
+              label: attrs.label,
+              color: PROGRAM_COLOR,
+              size: attrs.size * 1.1,
+              forceLabel: true,
+              zIndex: 2,
+              hidden: false,
+            };
+          }
+          if (magic !== null) {
+            const isMagic = magic.has(id);
+            if (magicModeRef.current === "filter" && !isMagic) {
+              return { ...attrs, hidden: true };
+            }
+            if (magicModeRef.current === "highlight" && !isMagic) {
+              return {
+                ...attrs,
+                label: "",
+                color: baseColor,
+                size: attrs.size * 0.6,
+                zIndex: 0,
+                hidden: false,
+              };
+            }
+          }
           return {
             ...attrs,
             label: truncatedLabel,
             color: baseColor,
             zIndex: attrs.rol === "requerido" ? 1 : 0,
+            hidden: false,
           };
         },
         edgeReducer: (id, attrs) => {

@@ -94,6 +94,20 @@ export interface LogPayload {
   readonly context?: Record<string, unknown>;
 }
 
+/** A Magic program with its associated SP ids (mirrors backend ProgramEntry). */
+export interface ProgramEntry {
+  readonly num: number;
+  readonly name: string;
+  readonly spIds: ReadonlyArray<string>;
+}
+
+/** Full programs payload returned by `GET /api/programs`. */
+export interface ProgramData {
+  readonly programs: ReadonlyArray<ProgramEntry>;
+  /** Map from SP id to the list of program numbers that use it. */
+  readonly spToPrograms: Readonly<Record<string, ReadonlyArray<number>>>;
+}
+
 /** Per-selection derived shape consumed by the detail panel. */
 export interface SpDetail {
   readonly id: string;

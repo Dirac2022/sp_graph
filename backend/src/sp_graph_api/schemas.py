@@ -99,6 +99,21 @@ class LogPayload(_CamelModel):
     context: dict[str, Any] | None = None
 
 
+class ProgramEntry(_CamelModel):
+    """A Magic program with its associated SP ids."""
+
+    num: int
+    name: str
+    sp_ids: list[str]
+
+
+class ProgramData(_CamelModel):
+    """Full programs payload returned by ``GET /api/programs``."""
+
+    programs: list[ProgramEntry]
+    sp_to_programs: dict[str, list[int]]
+
+
 class ErrorBody(_CamelModel):
     """Structured body returned for fatal data-file errors."""
 
