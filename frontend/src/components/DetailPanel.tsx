@@ -12,13 +12,20 @@ import {
   HelpCircle,
   Tag,
   Table2,
+  Zap,
 } from "lucide-react";
 
-import type { LeafObjectType, LeafRef, SpDetail, SpRole } from "../graph/types";
+import type { LeafObjectType, LeafRef, ProgramEntry, SpDetail, SpRole } from "../graph/types";
 
 interface DetailPanelProps {
   readonly detail: SpDetail | null;
   readonly onPick: (id: string) => void;
+  /** Map from SP id to list of program numbers that use it (from ProgramData). */
+  readonly spToPrograms?: Readonly<Record<string, ReadonlyArray<number>>> | undefined;
+  /** Full program list for label lookup. */
+  readonly programs?: ReadonlyArray<ProgramEntry> | undefined;
+  /** Called when the user clicks a program row. */
+  readonly onPickProgram?: ((prog: ProgramEntry) => void) | undefined;
 }
 
 const ROLE_LABEL: Record<SpRole, string> = {
@@ -137,7 +144,13 @@ const LeavesSection = ({
 };
 
 /** Right-hand detail panel. Renders nothing when no SP is selected. */
-export const DetailPanel = ({ detail, onPick }: DetailPanelProps): JSX.Element => {
+export const DetailPanel = ({
+  detail,
+  onPick,
+  spToPrograms,
+  programs,
+  onPickProgram,
+}: DetailPanelProps): JSX.Element => {
   const leafCounts = useMemo(() => {
     if (detail === null) return null;
     let tables = 0;
@@ -157,6 +170,14 @@ export const DetailPanel = ({ detail, onPick }: DetailPanelProps): JSX.Element =
     }
     return { tables, views, funcs };
   }, [detail]);
+
+  const magicPrograms = useMemo<ReadonlyArray<ProgramEntry>>(() => {
+    if (detail === null || !spToPrograms || !programs) return [];
+    const nums = spToPrograms[detail.id];
+    if (!nums || nums.length === 0) return [];
+    const numSet = new Set(nums);
+    return programs.filter((p) => numSet.has(p.num));
+  }, [detail, spToPrograms, programs]);
 
   if (detail === null) {
     return (
@@ -235,6 +256,35 @@ export const DetailPanel = ({ detail, onPick }: DetailPanelProps): JSX.Element =
             <LeavesSection leavesByType={detail.leavesByType} />
           </div>
         </details>
+
+        {magicPrograms.length > 0 ? (
+          <details open className="rounded border border-cyan-500/30">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-cyan-300">
+              <Zap className="-mt-px mr-1 inline h-3.5 w-3.5 align-middle text-cyan-400" />
+              Big Magic Programs · {magicPrograms.length}
+            </summary>
+            <div className="border-t border-cyan-500/20 px-2 py-2">
+              <ul className="space-y-0.5">
+                {magicPrograms.map((prog) => (
+                  <li key={prog.num}>
+                    <button
+                      type="button"
+                      onClick={() => onPickProgram?.(prog)}
+                      className="flex w-full items-center gap-2 rounded px-2 py-1 text-left transition hover:bg-neutral-800"
+                    >
+                      <span className="w-10 flex-shrink-0 text-right font-mono text-[0.65rem] text-neutral-500">
+                        {prog.num}
+                      </span>
+                      <span className="flex-1 truncate text-xs text-neutral-200">
+                        {prog.name}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
+        ) : null}
       </div>
     </div>
   );

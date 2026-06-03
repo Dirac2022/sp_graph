@@ -9,7 +9,7 @@
  *   never throws into the caller.
  */
 
-import type { ErrorEnvelope, GraphData, LogPayload } from "../graph/types";
+import type { ErrorEnvelope, GraphData, LogPayload, ProgramData } from "../graph/types";
 
 /** Error thrown by `fetchGraph` when the API returns a non-200 response. */
 export class ApiError extends Error {
@@ -49,6 +49,29 @@ export const fetchGraph = async (): Promise<GraphData> => {
     throw new ApiError(response.status, msg, envelope);
   }
   return (await response.json()) as GraphData;
+};
+
+/**
+ * Fetch the Magic program→SP mapping.
+ *
+ * @throws ApiError on non-200 responses.
+ */
+export const fetchPrograms = async (): Promise<ProgramData> => {
+  const response = await fetch("/api/programs", {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    let envelope: ErrorEnvelope | null = null;
+    try {
+      envelope = (await response.json()) as ErrorEnvelope;
+    } catch {
+      envelope = null;
+    }
+    const msg = envelope?.error?.message ?? `HTTP ${response.status}`;
+    throw new ApiError(response.status, msg, envelope);
+  }
+  return (await response.json()) as ProgramData;
 };
 
 /**

@@ -11,7 +11,8 @@ from fastapi.responses import JSONResponse
 from .config import Settings
 from .graph_loader import GraphLoader, GraphLoadError
 from .logger import configure_root_logger, get_logger
-from .schemas import ErrorBody, ErrorEnvelope, GraphData, LogPayload
+from .program_loader import ProgramLoader, ProgramLoadError
+from .schemas import ErrorBody, ErrorEnvelope, GraphData, LogPayload, ProgramData
 
 _LEVEL_INT = {"WARNING": logging.WARNING, "ERROR": logging.ERROR, "CRITICAL": logging.CRITICAL}
 
@@ -33,9 +34,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     log = get_logger(__name__)
 
     loader = GraphLoader(settings.resolved_data_path())
+    program_loader = ProgramLoader(settings.resolved_programs_path())
     app = FastAPI(title="SP Graph Viewer API", version="0.1.0")
     app.state.settings = settings
     app.state.loader = loader
+    app.state.program_loader = program_loader
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
@@ -57,6 +60,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     code=exc.code,  # type: ignore[arg-type]
                     message=exc.message,
                     data_file_path=str(active_loader.data_path),
+                )
+            )
+            return JSONResponse(status_code=500, content=body.model_dump(by_alias=True))
+
+    @app.get("/api/programs", response_model=ProgramData, response_model_by_alias=True)
+    def programs(request: Request) -> Any:
+        """Return the Magic program→SP mapping, re-reading on mtime change."""
+
+        active_program_loader: ProgramLoader = request.app.state.program_loader
+        try:
+            return active_program_loader.load()
+        except ProgramLoadError as exc:
+            log.error("Programs CSV error: %s :: %s", exc.code, exc.message)
+            body = ErrorEnvelope(
+                error=ErrorBody(
+                    code=exc.code,  # type: ignore[arg-type]
+                    message=exc.message,
+                    data_file_path=str(active_program_loader.csv_path),
                 )
             )
             return JSONResponse(status_code=500, content=body.model_dump(by_alias=True))

@@ -20,7 +20,7 @@ import { RotateCcw } from "lucide-react";
 
 import { GraphCanvas } from "./components/GraphCanvas";
 import { Legend } from "./components/Legend";
-import { SearchBar } from "./components/SearchBar";
+import { LeftSidebar } from "./components/LeftSidebar";
 import { DetailPanel } from "./components/DetailPanel";
 import { ErrorBanner } from "./components/ErrorBanner";
 import { WarningBanner } from "./components/WarningBanner";
@@ -28,10 +28,13 @@ import { buildGraph } from "./graph/buildGraph";
 import { buildSpDetail } from "./graph/spDetail";
 import { useGraphData } from "./hooks/useGraphData";
 import { useSelection } from "./hooks/useSelection";
+import { useProgramData } from "./hooks/useProgramData";
+import { useMagicFilter } from "./hooks/useMagicFilter";
 
 /** Top-level React component. */
 export const App = (): JSX.Element => {
   const fetchState = useGraphData();
+  const programFetchState = useProgramData();
 
   const graph = useMemo(() => {
     if (fetchState.status !== "ok") return undefined;
@@ -40,12 +43,16 @@ export const App = (): JSX.Element => {
 
   const selection = useSelection(graph);
 
+  const programData = programFetchState.status === "ok" ? programFetchState.data : undefined;
+  const magic = useMagicFilter(programData);
+
   const [resetSignal, setResetSignal] = useState<number>(0);
 
   const handleReset = useCallback(() => {
     selection.setSelection(null);
+    magic.reset();
     setResetSignal((n) => n + 1);
-  }, [selection]);
+  }, [selection, magic]);
 
   const detail = useMemo(() => {
     if (fetchState.status !== "ok" || selection.selected === null) return null;
@@ -102,11 +109,13 @@ export const App = (): JSX.Element => {
         {data.warnings.length > 0 ? <WarningBanner warnings={data.warnings} /> : null}
       </header>
 
-      <aside className="row-start-2 border-r border-neutral-800 bg-neutral-900 p-3">
-        <SearchBar
-          key={resetSignal}
-          names={data.nodes.map((n) => n.id)}
-          onPick={(id) => selection.setSelection(id)}
+      <aside className="row-start-2 overflow-hidden border-r border-neutral-800 bg-neutral-900">
+        <LeftSidebar
+          spNames={data.nodes.map((n) => n.id)}
+          onPickSp={(id) => selection.setSelection(id)}
+          programData={programData}
+          magic={magic}
+          resetSignal={resetSignal}
         />
       </aside>
 
@@ -119,13 +128,24 @@ export const App = (): JSX.Element => {
             callers={selection.callers}
             resetSignal={resetSignal}
             onSelect={(id) => selection.setSelection(id)}
+            magicSpIds={magic.isActive ? magic.magicSpIds : null}
+            magicMode={magic.mode}
+            selectedProgramSpIds={
+              magic.selectedProgram !== null ? magic.selectedProgramSpIds : null
+            }
           />
         ) : null}
         <Legend />
       </main>
 
       <aside className="row-start-2 border-l border-neutral-800 bg-neutral-900">
-        <DetailPanel detail={detail} onPick={(id) => selection.setSelection(id)} />
+        <DetailPanel
+          detail={detail}
+          onPick={(id) => selection.setSelection(id)}
+          spToPrograms={programData?.spToPrograms}
+          programs={programData?.programs}
+          onPickProgram={(prog) => magic.setSelectedProgram(prog)}
+        />
       </aside>
     </div>
   );
